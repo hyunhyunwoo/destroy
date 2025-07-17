@@ -3,3 +3,4 @@ plotly
 folium
 streamlit-folium
 matplotlib
+xlrd>=2.0.1
