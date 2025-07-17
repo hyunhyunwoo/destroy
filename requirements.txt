@@ -1,5 +1,0 @@
-yfinance
-plotly
-folium
-streamlit-folium
-matplotlib.pyplot
