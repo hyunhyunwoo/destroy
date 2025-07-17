@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -8,49 +7,30 @@ st.title("무임승차 비율 상위 20개 지하철역")
 @st.cache_data
 def load_data():
     file_path = "tnwjdqh.xls"
-    df = pd.read_excel(file_path, skiprows=2)
-    df.columns = df.columns.str.strip()  # 공백 제거
+
+    # 컬럼 수동 지정 (원래 데이터 구조 기준)
+    col_names = ['날짜', '호선', '역ID', '역명', '유임승차', '유임하차', '무임승차', '무임하차', '등록일자']
+    df = pd.read_excel(file_path, header=None, names=col_names, skiprows=2)
+    df = df[['역명', '유임승차', '무임승차']]
     return df
 
 df = load_data()
 
-# 컬럼명 출력해서 확인
-st.subheader("컬럼명 확인")
-st.write(df.columns.tolist())
+# 전처리
+df = df.dropna()
+df['유임승차'] = df['유임승차'].astype(str).str.replace(',', '').astype(int)
+df['무임승차'] = df['무임승차'].astype(str).str.replace(',', '').astype(int)
 
-# 컬럼명 자동 탐색
-역_후보 = [col for col in df.columns if '역' in col or '지하철역' in col]
-유임_후보 = [col for col in df.columns if '유임' in col and '승차' in col]
-무임_후보 = [col for col in df.columns if '무임' in col and '승차' in col]
+# 무임 비율 계산
+df['무임비율(%)'] = df['무임승차'] / (df['유임승차'] + df['무임승차']) * 100
 
-if not (역_후보 and 유임_후보 and 무임_후보):
-    st.error("❌ 필요한 컬럼(역명, 유임승차, 무임승차)을 찾을 수 없습니다.\n\n컬럼명을 확인해주세요.")
-    st.stop()
+# 상위 20개 역
+top20 = df.sort_values(by='무임비율(%)', ascending=False).head(20)
 
-역_컬럼 = 역_후보[0]
-유임_컬럼 = 유임_후보[0]
-무임_컬럼 = 무임_후보[0]
-
-# 필요한 컬럼만 선택
-df_filtered = df[[역_컬럼, 유임_컬럼, 무임_컬럼]].copy()
-df_filtered.columns = ['역명', '유임승차인원', '무임승차인원']
-
-# 결측치 및 타입 정리
-df_filtered = df_filtered.dropna()
-df_filtered[['유임승차인원', '무임승차인원']] = df_filtered[['유임승차인원', '무임승차인원']].astype(int)
-
-# 무임비율 계산
-df_filtered['무임비율(%)'] = df_filtered['무임승차인원'] / (
-    df_filtered['유임승차인원'] + df_filtered['무임승차인원']
-) * 100
-
-# 상위 20개 추출
-top20 = df_filtered.sort_values(by='무임비율(%)', ascending=False).head(20)
-
-# 그래프
+# 시각화
 st.subheader("무임승차 비율 상위 20개 역")
 fig, ax = plt.subplots(figsize=(12, 6))
-ax.bar(top20['역명'], top20['무임비율(%)'], color='skyblue')
+ax.bar(top20['역명'], top20['무임비율(%)'], color='tomato')
 ax.set_xlabel("역명")
 ax.set_ylabel("무임승차 비율 (%)")
 ax.set_title("무임 / (유임 + 무임) 비율 상위 20개 역")
